@@ -24,26 +24,49 @@ type environment = {
     }
   [@@deriving show]
 
-let tp_expr (env: environment) (e: expr) : tp =
-  match e with
-  | Const c -> 
-      (match c with
+let tp_expr_const c =
+  match c with
        | IntV i -> UnionT [IntT]
        | BoolV b -> UnionT [BoolT]
        | FloatV f -> UnionT [FloatT]
        | StringV s -> UnionT [StringT]
-       | _ -> UnionT [NoneT])
-  | VarE v ->
-      (try List.assoc v env.dyn_vars.locals
-       with Not_found -> List.assoc v env.dyn_vars.globals)
+       | _ -> UnionT [NoneT]
+
+let tp_expre_varE v env =
+  (try List.assoc v env.dyn_vars.locals
+     with Not_found ->
+       try List.assoc v env.dyn_vars.globals
+       with Not_found ->
+         failwith ("Variable non définie : " ^ v))
+
+let tp_expr (env: environment) (e: expr) : tp =
+  match e with
+  | Const c -> tp_expr_const c
+  | VarE v -> tp_expre_varE v env
   | _ -> UnionT [NoneT]
 ;;
 
 let rec tp_stmt ((env, t, returned) : (environment * tp * bool)) s =
   match s with
-  | Block[Assign(v,e)] -> 
-    let t = tp_expr env e in Printf.printf "Type : %s\n" (Lang.show_tp t); true
-  | _ -> Printf.printf "Type : inconnue"; true;;
+  | Block stmts ->
+    (match stmts with
+    | [] -> (env, t, returned)
+    | stmt :: rest ->
+        let (new_env, new_t, new_returned) = tp_stmt (env, t, returned) stmt in
+        tp_stmt (new_env, new_t, new_returned) (Block rest))
+
+  | Assign (v, e) ->
+    let t_expr = tp_expr env e in
+    Printf.printf "Type : %s\n" (Lang.show_tp t_expr);
+    let new_env = {
+      env with
+      dyn_vars = {
+        env.dyn_vars with
+        globals = (v, t_expr) :: env.dyn_vars.globals
+      }
+    } in
+    (new_env, t, returned)
+;;
 
 
 let tp_fundefn init_env (Fundefn(Fundecl(fn, pards, rt), vds, s)) = true
