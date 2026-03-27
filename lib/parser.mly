@@ -80,11 +80,21 @@ atom:
 ;
   
 expression:
-    primary
-    { $1 }
+  | mult = mult_expr { mult }
+  | add = add_expr { add }
+  | primary { $1 }
     /* OMITTED: expression , assignment_expression */
+
 ;
 
+add_expr:
+  | e1 = add_expr PLUS e2 = primary { BinOp (BArith BAadd,e1,e2) }
+  | primary { $1 }
+; 
+
+mult_expr:
+  | e1 = mult_expr PLUS e2 = primary { BinOp (BArith BAmul,e1,e2) }
+  | primary { $1 }
 
 /* *******  STATEMENTS  ******* */
 
@@ -100,30 +110,30 @@ block:
 
 /* Regle composée */
 compound_stmt: 
-| w = while_stmt { w }
-| b = block { b }
-| i = if_stmt { i }
-;
+  | w = while_stmt { w }
+  | b = block { b }
+  | i = if_stmt { i }
+  
 
 /*WHILE réfère au token WHILE dans lang.ml */
 
 while_stmt:
-| WHILE e = expression COLON b = block
-    { While (e, b) }
+  | WHILE e = expression COLON b = block
+      { While (e, b) }
 ;
 
 if_stmt:
-| IF e = expression COLON b1 = block ELSE COLON b2 = block
+  | IF e = expression COLON b1 = block ELSE COLON b2 = block
     { Cond (e, b1, b2) }
-| IF e = expression COLON b = block
+  | IF e = expression COLON b = block
     { Cond (e, b, Block []) }
 ;
 
 
 /* TODO: also consider return and call */
 simple_stmt:
-  |  s = assignment { s }
-  |  r = return_stmt { r }
+  | s = assignment { s }
+  | r = return_stmt { r }
 ;
 
 assignment: vn = IDENTIFIER; EQ; e = expression  { Assign(vn, e) }
