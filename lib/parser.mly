@@ -80,22 +80,41 @@ atom:
 ;
   
 expression:
-  | mult = mult_expr { mult }
-  | add = add_expr { add }
-  | primary { $1 }
+  | or_e = or_expr { or_e }
     /* OMITTED: expression , assignment_expression */
+;
 
+or_expr:
+  | and_e = and_expr { and_e }
+  | o1 = or_expr BLOR o2 = and_expr { BinOp (BBool BBor,o1,o2) }
+
+and_expr:
+  | comp = compar_expr { comp }
+  | a1 = and_expr BLAND a2 = compar_expr { BinOp (BBool BBand,a1,a2) }
+;
+
+compar_expr:
+  | add = add_expr { add }
+  | a1 = add_expr BCEQ a2 = add_expr { BinOp (BCompar BCeq,a1,a2)} 
+  | a1 = add_expr BCNE a2 = add_expr { BinOp (BCompar BCne,a1,a2)} 
+  | a1 = add_expr BCGT a2 = add_expr { BinOp (BCompar BCgt,a1,a2)} 
+  | a1 = add_expr BCGE a2 = add_expr { BinOp (BCompar BCge,a1,a2)} 
+  | a1 = add_expr BCLT a2 = add_expr { BinOp (BCompar BClt,a1,a2)} 
+  | a1 = add_expr BCLE a2 = add_expr { BinOp (BCompar BCle,a1,a2)} 
 ;
 
 add_expr:
-  | e1 = add_expr PLUS e2 = primary { BinOp (BArith BAadd,e1,e2) }
-  | primary { $1 }
+  | e1 = add_expr PLUS e2 = mult_expr { BinOp (BArith BAadd,e1,e2) }
+  | e1 = add_expr MINUS e2 = mult_expr { BinOp (BArith BAsub,e1,e2) }
+  | mult = mult_expr { mult }
 ; 
 
 mult_expr:
-  | e1 = mult_expr PLUS e2 = primary { BinOp (BArith BAmul,e1,e2) }
+  | e1 = mult_expr TIMES e2 = primary { BinOp (BArith BAmul,e1,e2) }
+  | e1 = mult_expr DIV e2 = primary { BinOp (BArith BAdiv,e1,e2) }
+  | e1 = mult_expr MOD e2 = primary { BinOp (BArith BAmod,e1,e2) }
   | primary { $1 }
-
+;
 /* *******  STATEMENTS  ******* */
 
 /* TODO: Most statement need to be defined */

@@ -1,0 +1,1 @@
+a = 2 == 2 and False or True
