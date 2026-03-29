@@ -65,20 +65,22 @@ vardecl: i = IDENTIFIER; COLON; t= tpexpr_base { Vardecl(i, mk_norm_tp [t]) }
 /* *******  EXPRESSIONS  ******* */
 
 primary:
-| a =atom { a }
+  | a = atom { a }
 ;
 
   
 atom: 
-  v = IDENTIFIER      { VarE(v) }
-| bc = BCONSTANT      { Const(BoolV bc) }
-| fc = FLOATCONSTANT  { Const(FloatV fc) }
-| ic = INTCONSTANT    { Const(IntV ic) }
-| c = STRINGCONSTANT  { Const(StringV(c)) }
-| LPAREN e = expression RPAREN
-    { e }
+  | f = IDENTIFIER LPAREN a = argument RPAREN { CallE(f, a) }
+  | v = IDENTIFIER      { VarE(v) }
+  | bc = BCONSTANT      { Const(BoolV bc) }
+  | fc = FLOATCONSTANT  { Const(FloatV fc) }
+  | ic = INTCONSTANT    { Const(IntV ic) }
+  | c = STRINGCONSTANT  { Const(StringV(c)) }
+  | LPAREN e = expression RPAREN { e }
 ;
-  
+
+argument: sl = separated_list(COMMA, expression) { sl }
+
 expression:
   | or_e = or_expr { or_e }
     /* OMITTED: expression , assignment_expression */
@@ -154,10 +156,14 @@ if_stmt:
 simple_stmt:
   | s = assignment { s }
   | r = return_stmt { r }
+  | cs = callS_stmt { cs } 
 ;
 
 assignment: vn = IDENTIFIER; EQ; e = expression  { Assign(vn, e) }
 ;
 
 return_stmt: RETURN e = expression { Return(e) }
+;
+
+callS_stmt: p = IDENTIFIER LPAREN a = argument RPAREN { CallS(p,a) }
 ;
