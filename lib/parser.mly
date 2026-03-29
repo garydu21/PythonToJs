@@ -103,6 +103,7 @@ compar_expr:
   | a1 = add_expr BCLE a2 = add_expr { BinOp (BCompar BCle,a1,a2)} 
 ;
 
+
 add_expr:
   | e1 = add_expr PLUS e2 = mult_expr { BinOp (BArith BAadd,e1,e2) }
   | e1 = add_expr MINUS e2 = mult_expr { BinOp (BArith BAsub,e1,e2) }
