@@ -14,11 +14,13 @@ let id_to_tp = function
 
 
 (* Separating a list of Left / Right tagged elements into two lists (left and right) *)
-let add_left (ls, rs) le = (ls@[le], rs)
-let add_right (ls, rs) re = (ls, rs@[re])
 
-let sep_left_right lrs =
-  List.fold_left (fun p -> (Either.fold ~left:(add_left p) ~right:(add_right p))) ([],[]) lrs
+
+type top =
+  | TopFun of fundefn
+  | TopVar of vardecl
+  | TopStmt of stmt
+
 %}
 
 %token <string> IDENTIFIER
@@ -44,13 +46,24 @@ main: p = prog; EOF { p }
 ;
 
 /* TODO: add function definitions */
-prog: svs = list(statement_or_vardecl) 
-     { let (vds, ss) = sep_left_right svs in Prog([], vds, Block ss) }
+prog:
+  svs = list(statement_or_vardecl_or_fun) {
+  let (funcs, vds, ss) =
+    List.fold_left (fun (fs, vs, st) x ->
+      match x with
+      | TopFun f  -> (f :: fs, vs, st)
+      | TopVar v  -> (fs, v :: vs, st)
+      | TopStmt s -> (fs, vs, s :: st)
+    ) ([], [], []) svs
+  in
+  Prog(List.rev funcs, List.rev vds, Block(List.rev ss))
+}
 ;
 
-statement_or_vardecl : 
-|  s = vardecl   { Either.Left s }
-|  s = statement { Either.Right s}
+statement_or_vardecl_or_fun : 
+|  v = vardecl   { TopVar v }
+|  s = statement { TopStmt s}
+|  f = func_def { TopFun f}
 ;
 
 /* basic type expressions, as in: x : int */
@@ -60,6 +73,11 @@ tpexpr_base:
 
 /* TODO: add complex type expressions, as in: x : int | str */
 vardecl: i = IDENTIFIER; COLON; t= tpexpr_base { Vardecl(i, mk_norm_tp [t]) }
+;
+
+func_def:
+  | DEF vn = IDENTIFIER LPAREN params = separated_list(COMMA, vardecl) RPAREN ARROW t = tpexpr_base COLON b = block
+    { Fundefn(Fundecl(vn, params, mk_norm_tp [t]), [], b)}
 ;
 
 /* *******  EXPRESSIONS  ******* */
