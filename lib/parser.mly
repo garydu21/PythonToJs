@@ -13,13 +13,24 @@ let id_to_tp = function
    | t -> failwith ("invalid type name " ^ t)
 
 
-(* Separating a list of Left / Right tagged elements into two lists (left and right) *)
-
-(* Type représentant les trois syntaxes possibles *)
 type top =
   | TopFun of fundefn
   | TopVar of vardecl
   | TopStmt of stmt
+
+(* Separating a list of Left / Center / Right tagged elements into three lists (left center and right) *)
+let add_left (ls, cs, rs) le = (ls@[le], cs, rs)
+let add_center (ls, cs, rs) ce = (ls, cs@[ce], rs)
+let add_right (ls, cs, rs) re = (ls, cs, rs@[re])
+
+let sep_top lrs =
+  List.fold_left (fun acc p ->
+    match p with
+    | TopFun v   -> add_left acc v
+    | TopVar c -> add_center acc c
+    | TopStmt r  -> add_right acc r
+  ) ([], [], []) lrs
+
 
 %}
 
@@ -45,19 +56,8 @@ type top =
 main: p = prog; EOF { p }
 ;
 
-
-prog:
-  svs = list(statement_or_vardecl_or_fun) {
-  let (funcs, vds, ss) =
-    List.fold_left (fun (fs, vs, st) x ->
-      match x with
-      | TopFun f  -> (f :: fs, vs, st)
-      | TopVar v  -> (fs, v :: vs, st)
-      | TopStmt s -> (fs, vs, s :: st)
-    ) ([], [], []) svs
-  in
-  Prog(List.rev funcs, List.rev vds, Block(List.rev ss))
-}
+prog: svs = list(statement_or_vardecl_or_fun) 
+     { let (fs, vs, ss) = sep_top svs in Prog(fs, vs, Block ss) }
 ;
 
 (* Detecter si un mot est un stmt ou un decl de variable ou une fonction *)
