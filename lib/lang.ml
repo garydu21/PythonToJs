@@ -72,6 +72,7 @@ type expr =
       
 type stmt =
     Block of stmt list
+  | VardeclS of vardecl
   | Assign of vname * expr                   (* Variable assignment: x = e *)
   | Cond of expr * stmt * stmt               (* if .. then .. else *)
   | While of expr * stmt                  
