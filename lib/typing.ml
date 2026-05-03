@@ -194,7 +194,7 @@ let tp_fundefn init_env (Fundefn(Fundecl(fn, pards, rt), vds, s)) =
 let library_fds = [
     ("input", ([UnionT [StringT]], UnionT [StringT]));
     ("int",   ([UnionT [BoolT; FloatT; IntT; StringT]], UnionT [IntT]));
-    ("print", ([UnionT [StringT]], UnionT [NoneT]));
+    ("print", ([UnionT [StringT]; UnionT [BoolT; FloatT; IntT; NoneT; StringT]], UnionT [NoneT]));
     ("str",   ([UnionT [BoolT; FloatT; IntT; StringT]], UnionT [StringT]))
 ]
 

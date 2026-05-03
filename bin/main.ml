@@ -10,10 +10,13 @@ let main () =
       if Array.length Sys.argv <= 2
       then print_help ()
       else run_file (Sys.argv.(2))
+    | "h" ->
+      if Array.length Sys.argv <= 2
+      then print_help ()
+      else run_file_html (Sys.argv.(2))
     | _ -> print_help ()
 
  
  (* ---------------------------------------------------------------- *)
 
 let () = main ()
-

@@ -71,3 +71,8 @@ let run_file fn =
 
 (* Print the help message *)
 let print_help () = print_string "Run as:\n PythonToJS [h | i | f <filename> ] \n "
+
+let run_file_html fn =
+  let p = run_parser_error_reporting (Some fn) in
+  let _ = Typing.tp_prog p in
+  Pprinter.print_prog_html p

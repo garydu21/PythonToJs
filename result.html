@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>PythonToJS</h1>
+<script>
+function valeur_absolue (x) {
+    let res;
+    if ((x < 0)) {
+        res = (0 - x);
+    } else {
+        res = x;
+    }
+    return(res);
+}
+
+function compte (n) {
+    let i;
+    i = 0;
+    while ((i < n)) {
+        i = (i + 1);
+    }
+    return(i);
+}
+</script>
+<label for="x">Enter value x: </label>
+<input type="number" id="x"><br><br>
+<label>Result: </label> <label id="demo"></label>
+<p></p>
+<button onclick="document.getElementById('demo').innerHTML = valeur_absolue(parseInt(document.getElementById('x').value))">
+Compute </button>
+</body>
+</html>
