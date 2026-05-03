@@ -24,6 +24,12 @@ type environment = {
 }
 [@@deriving show]
 
+let tp_union (UnionT ts1) (UnionT ts2) =
+  mk_norm_tp (ts1 @ ts2)
+
+let tp_compatible (UnionT ts1) (UnionT ts2) =
+  List.for_all (fun b1 -> List.mem b1 ts2) ts1
+
 let tp_expr_const c =
   match c with
   | IntV _ -> UnionT [IntT]
@@ -38,6 +44,31 @@ let tp_expre_varE v env =
     try List.assoc v env.dyn_vars.globals
     with Not_found ->
       failwith ("Variable non définie : " ^ v)
+
+let tp_expre_varE_static v env =
+  try List.assoc v env.static_vars.locals
+  with Not_found ->
+    try List.assoc v env.static_vars.globals
+    with Not_found ->
+      failwith ("Variable non déclarée : " ^ v)
+
+let tp_update_dyn v t env =
+  if List.mem_assoc v env.dyn_vars.locals then
+    { env with dyn_vars = { env.dyn_vars with locals = update_assoc v t env.dyn_vars.locals } }
+  else
+    { env with dyn_vars = { env.dyn_vars with globals = update_assoc v t env.dyn_vars.globals } }
+
+let tp_merge_dyn env env1 env2 =
+  let merge lst1 lst2 =
+    List.map (fun (v, t1) ->
+      let t2 = try List.assoc v lst2 with Not_found -> t1 in
+      (v, tp_union t1 t2)
+    ) lst1
+  in
+  { env with dyn_vars = {
+    globals = merge env1.dyn_vars.globals env2.dyn_vars.globals;
+    locals  = merge env1.dyn_vars.locals  env2.dyn_vars.locals;
+  }}
 
 let rec tp_expr (env: environment) (e: expr) : tp =
   match e with
@@ -80,7 +111,7 @@ and tp_expre_CallE f_name exp_list env =
       match args, params with
       | [], [] -> return_type
       | t_arg :: rest_args, t_param :: rest_params ->
-          if t_arg = t_param then
+          if tp_compatible t_arg t_param then
             check_args rest_args rest_params
           else
             failwith ("Type d'argument incorrect pour " ^ f_name)
@@ -97,20 +128,67 @@ let rec tp_stmt ((env, t, returned) : (environment * tp * bool)) s =
            let (new_env, new_t, new_returned) = tp_stmt (env, t, returned) stmt in
            tp_stmt (new_env, new_t, new_returned) (Block rest))
 
+  | VardeclS (Vardecl(v, vt)) ->
+      let add lst = if List.mem_assoc v lst then lst else lst @ [(v, vt)] in
+      let in_fun = env.static_vars.locals <> [] in
+      let new_static =
+        if in_fun then { globals = env.static_vars.globals; locals = add env.static_vars.locals }
+        else { globals = add env.static_vars.globals; locals = env.static_vars.locals }
+      in
+      let new_dyn =
+        if in_fun then { globals = env.dyn_vars.globals; locals = add env.dyn_vars.locals }
+        else { globals = add env.dyn_vars.globals; locals = env.dyn_vars.locals }
+      in
+      ({ env with static_vars = new_static; dyn_vars = new_dyn }, t, returned)
+
   | Assign (v, e) ->
       let t_expr = tp_expr env e in
-      Printf.printf "Type : %s\n" (Lang.show_tp t_expr);
-      let new_env = {
-        env with
-        dyn_vars = {
-          env.dyn_vars with
-          globals = (v, t_expr) :: env.dyn_vars.globals
-        }
-      } in
+      let t_static = tp_expre_varE_static v env in
+      if not (tp_compatible t_expr t_static) then
+        failwith ("Affectation invalide pour " ^ v);
+      let new_env = tp_update_dyn v t_expr env in
       (new_env, t, returned)
+
+  | Cond (cond, s1, s2) ->
+      let _ = tp_expr env cond in
+      let (env1, t1, ret1) = tp_stmt (env, t, false) s1 in
+      let (env2, t2, ret2) = tp_stmt (env, t, false) s2 in
+      let merged_env = tp_merge_dyn env env1 env2 in
+      (merged_env, tp_union t1 t2, ret1 && ret2)
+
+  | While (cond, body) ->
+      let _ = tp_expr env cond in
+      let rec fixpoint env_cur =
+        let (env_after, _, _) = tp_stmt (env_cur, t, false) body in
+        let env_merged = tp_merge_dyn env env_cur env_after in
+        if env_merged.dyn_vars = env_cur.dyn_vars then env_after
+        else fixpoint env_merged
+      in
+      let env_final = fixpoint env in
+      (env_final, t, false)
+
+  | Return e ->
+      let t_e = tp_expr env e in
+      (env, tp_union t t_e, true)
+
+  | CallS (f_name, args) ->
+      let _ = tp_expre_CallE f_name args env in
+      (env, t, returned)
 ;;
 
-let tp_fundefn init_env (Fundefn(Fundecl(fn, pards, rt), vds, s)) = true
+let tp_fundefn init_env (Fundefn(Fundecl(fn, pards, rt), vds, s)) =
+  let param_bindings = List.map (fun (Vardecl(n, t)) -> (n, t)) pards in
+  let local_bindings = List.map (fun (Vardecl(n, t)) -> (n, t)) vds in
+  let all_locals = param_bindings @ local_bindings in
+  if not (duplicate_free (List.map fst all_locals)) then
+    failwith ("Déclarations locales dupliquées dans la fonction " ^ fn);
+  let local_venv = { globals = init_env.static_vars.globals; locals = all_locals } in
+  let fun_env = { init_env with static_vars = local_venv; dyn_vars = local_venv; curfun = Some fn } in
+  let (_, body_ret_tp, _) = tp_stmt (fun_env, UnionT [NoneT], false) s in
+  let UnionT ts = body_ret_tp in
+  let effective = UnionT (List.filter (fun b -> b <> NoneT) ts) in
+  if tp_compatible effective rt then true
+  else failwith ("Type de retour incorrect pour la fonction " ^ fn)
 
 (* Function declarations of library / predefined functions *)
 let library_fds = [
@@ -122,8 +200,10 @@ let library_fds = [
 
 (* The following has to be defined in detail *)
 let tp_prog (Prog(fdefns, vds, s)) = 
-  let fds = [] in
-  let globs = [("x", UnionT [IntT]); ("y", UnionT [BoolT])] in
+  let fds = List.map (fun (Fundefn(Fundecl(fn, pards, rt), _, _)) ->
+    (fn, (List.map tp_of_vardecl pards, rt))
+  ) fdefns in
+  let globs = List.map (fun (Vardecl(n, t)) -> (n, t)) vds in
   let init_venv = { globals = globs; locals = [] } in 
   let init_env = 
     { fdecls = fds @ library_fds; static_vars = init_venv; dyn_vars = init_venv; curfun = None } in
