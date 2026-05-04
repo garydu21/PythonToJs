@@ -1,6 +1,5 @@
 open PythonToJS.Interf
 
-(* dune exec messes up the options if they are written -i, -f etc. *)
 let main () = 
   if Array.length Sys.argv <= 1
   then print_help ()
