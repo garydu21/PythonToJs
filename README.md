@@ -1,4 +1,4 @@
-# Projet PythonToJS — L3 Info, Algorithmes, Types de données et preuves 2025-2026
+# Projet PythonToJS — L3 Info, Types de données et preuves 2025-2026 - BESANCENEZ Angel - KALOUCHE Chris
 
 ## Compilation
 
