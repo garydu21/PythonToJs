@@ -90,7 +90,7 @@ Le fichier `pprinter.ml` implémente la génération de code à l'aide de la bib
 
 ## Arbre des commits
 
-![Arbre des commits](abre_commit.png)
+![Arbre des commits](arbre_commit.png)
 
 ## Utilisation d'assistants IA
 
