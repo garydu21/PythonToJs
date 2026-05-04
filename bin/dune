@@ -1,0 +1,9 @@
+(executable
+ (public_name PythonToJS)
+ (name main)
+ (libraries
+  PythonToJS)
+ )
+
+ ; turn unused-value-declaration error into warning
+(env (dev (flags :standard -warn-error -8-27-32)))

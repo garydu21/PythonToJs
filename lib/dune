@@ -1,0 +1,18 @@
+(library
+ (name PythonToJS)
+ (libraries
+  pprint
+  ppx_deriving)
+ (preprocess (pps ppx_deriving.show))
+)
+
+; (!!!) make a choice
+(ocamllex lexer)
+;(ocamllex lexer2)
+
+; (!!!) uncomment the following to use menhir
+(menhir
+ (modules parser))
+
+; turn unused-value-declaration error into warning
+(env (dev (flags :standard -warn-error -8-27-32-39)))

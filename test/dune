@@ -1,0 +1,10 @@
+(test
+ (name test_PythonToJS))
+
+(cram
+ (deps 
+  %{bin:PythonToJS} 
+  (glob_files *.py))
+ )
+
+
