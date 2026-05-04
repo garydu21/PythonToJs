@@ -88,6 +88,10 @@ Le fichier `pprinter.ml` implémente la génération de code à l'aide de la bib
 - Le calcul de point fixe pour `While` est implémenté et fonctionne correctement.
 - La distinction environnement statique / dynamique est bien gérée, avec mise à jour correcte dans locals ou globals selon le contexte.
 
+## Arbre des commits
+
+![Arbre des commits](abre_commit.png)
+
 ## Utilisation d'assistants IA
 
 Claude (Anthropic) a été utilisé comme assistant tout au long du projet, notamment pour la compréhension des consignes, vérifier si certaines parties du code étaient correctes, et l'élaboration des fichiers de test.
